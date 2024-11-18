@@ -64,13 +64,13 @@ const notifyStartError = () => {
 const AdminInfra = () => {
   const [contenedores, setContenedores] = useState([]);
   
-  function isEmpty(str) {
+ function isEmpty(str) {
     return !str.trim().length;
   }
 
   function isJSONEmpty(obj){
     return Object.keys(obj).length === 0;
-  }
+  }  
 
   const getContenedores = async () => {
     try {
