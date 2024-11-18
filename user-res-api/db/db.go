@@ -21,7 +21,6 @@ func init() {
 	DBName := "UCC_as2_final"
 	DBUser := "root"
 	DBPass := ""
-	//DBPass := "Manuela10Simes"
 	//DBPass := os.Getenv("MVC_DB_PASS")
 	DBHost := "mysql"
 	//DBHost := "localhost"
