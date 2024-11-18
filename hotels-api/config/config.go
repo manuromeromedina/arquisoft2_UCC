@@ -28,3 +28,13 @@ var (
 	USERAPIHOST = "user-res-api"
 	USERAPIPORT = 8070
 )
+
+/* var (
+    MYSQLHOST     = "localhost"
+    MYSQLPORT     = 3306
+    MYSQLUSER     = "root"
+    MYSQLPASSWORD = ""
+    MYSQLDB       = "your_database_name"
+
+    MYSQLConnectionString = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", MYSQLUSER, MYSQLPASSWORD, MYSQLHOST, MYSQLPORT, MYSQLDB)
+) */

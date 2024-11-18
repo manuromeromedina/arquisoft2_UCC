@@ -1,0 +1,3 @@
+# Ignorar archivo de socket MySQL
+db_data/mysql.sock
+db_data/
