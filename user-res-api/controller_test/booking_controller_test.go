@@ -61,6 +61,14 @@ func (m *MockBookingService) GetAmadeustoken() string {
 	return args.String(0)
 }
 
+func (m *MockBookingService) DeleteBooking(id int) error {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Error(0)
+}
+
 func TestGetAvailabilityByIdAndDate(t *testing.T) {
 	// Configurar el entorno de prueba
 	gin.SetMode(gin.TestMode)

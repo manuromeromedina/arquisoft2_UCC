@@ -15,10 +15,17 @@ const notifyBooked = () => {
   });
 };
 
-const notifyError = () => {
-  toast.error("Hotel no disponible para reserva en fecha seleccionada!", {
+const notifyError = (message = "Hotel no disponible para reserva en fecha seleccionada!") => {
+  toast.error(message, {
     pauseOnHover: false,
-    autoClose: 2000,
+    autoClose: 3000,
+  });
+};
+
+const notifyWarning = (message) => {
+  toast.warning(message, {
+    pauseOnHover: false,
+    autoClose: 3000,
   });
 };
 
@@ -52,28 +59,63 @@ const ReservaPage = () => {
 
   const handleReserva = async (e) => {
     e.preventDefault();
+    
     if (auth.userType === false) {
+      // Primero verificar disponibilidad antes de intentar reservar
+      const startDateParsed = convertirFecha(startDate);
+      const endDateParsed = convertirFecha(endDate);
 
-      const formData = {
-        booked_hotel_id: hotelId,
-        user_booked_id: parseInt(accountId),
-        start_date: convertirFecha(startDate),
-        end_date: convertirFecha(endDate),
-      };
+      try {
+        // Verificar disponibilidad primero
+        const availabilityResponse = await fetch(`http://localhost/user-res-api/hotel/availability/${hotelId}/${startDateParsed}/${endDateParsed}`);
+        const availability = await availabilityResponse.json();
 
-      fetch('http://localhost/user-res-api/booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      }).then((response) => {
-        if (response.status === 400 || response.status === 401 || response.status === 403) {
-          notifyError();
-        } else {
-          notifyBooked();
+        if (availability === 0) {
+          notifyError("No hay disponibilidad para las fechas seleccionadas");
+          return;
         }
-      });
+
+        // Si hay disponibilidad, proceder con la reserva
+        const userIdNum = parseInt(accountId);
+
+        const formData = {
+          booked_hotel_id: hotelId,
+          user_booked_id: userIdNum,
+          start_date: startDateParsed,
+          end_date: endDateParsed,
+        };
+
+        console.log('Datos a enviar:', formData);
+
+        const response = await fetch('http://localhost/user-res-api/booking', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        console.log('Response status:', response.status);
+
+        if (response.status === 201) {
+          notifyBooked();
+          setTimeout(() => {
+            navigate('/ver-reservas');
+          }, 2500);
+        } else {
+          const errorData = await response.json();
+          console.log('Error del backend:', errorData);
+          
+          if (errorData.message) {
+            notifyError(errorData.message);
+          } else {
+            notifyError("Error al procesar la reserva");
+          }
+        }
+      } catch (error) {
+        console.error('Error de red:', error);
+        notifyError("Error de conexión. Inténtalo de nuevo.");
+      }
     } else {
       errorNotAClient();
     }
@@ -103,8 +145,9 @@ const ReservaPage = () => {
     if (endDate && startDateObj > endDateObj) {
       setEndDate('');
     }
-    if (startDate && endDate) {
-      filterHotels();
+    // Verificar disponibilidad cuando ambas fechas estén seleccionadas
+    if (selectedStartDate && endDate) {
+      setTimeout(() => filterHotels(), 500); // Pequeño delay para que se actualice el estado
     }
   };
 
@@ -116,23 +159,37 @@ const ReservaPage = () => {
     if (startDate && startDateObj > endDateObj) {
       setStartDate('');
     }
-    if (startDate && endDate) {
-      filterHotels();
+    // Verificar disponibilidad cuando ambas fechas estén seleccionadas
+    if (startDate && selectedEndDate) {
+      setTimeout(() => filterHotels(), 500); // Pequeño delay para que se actualice el estado
     }
   };
 
   console.log(hotelData);
 
   const filterHotels = async () => {
+    if (!startDate || !endDate) return;
+    
     const startDateParsed = convertirFecha(startDate);
     const endDateParsed = convertirFecha(endDate);
 
-    const request = await fetch(`http://localhost/user-res-api/hotel/availability/${hotelId}/${startDateParsed}/${endDateParsed}`);
-    const response = await request.json();
+    try {
+      const request = await fetch(`http://localhost/user-res-api/hotel/availability/${hotelId}/${startDateParsed}/${endDateParsed}`);
+      const response = await request.json();
 
-    if (response === 0) {
-      setEndDate('');
-      notifyError();
+      console.log('Disponibilidad:', response);
+
+      if (response === 0) {
+        notifyWarning("No hay disponibilidad para las fechas seleccionadas. Prueba con otras fechas.");
+      } else {
+        toast.success(`Disponible! Hay ${response} habitaciones disponibles`, {
+          pauseOnHover: false,
+          autoClose: 2000,
+        });
+      }
+    } catch (error) {
+      console.error('Error verificando disponibilidad:', error);
+      notifyError("Error al verificar disponibilidad");
     }
   };
 

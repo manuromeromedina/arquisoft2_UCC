@@ -1,18 +1,20 @@
-# Dockerfile for React frontend
-FROM node:14
+# Usa una versión más reciente de Node.js
+FROM node:14-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copia los archivos de dependencias
 COPY package*.json ./
-RUN npm install
 
-# Copy the rest of the application code
+# Limpia caché de npm e instala dependencias con más verbosidad
+RUN npm cache clean --force && \
+    npm install --verbose --no-optional
+
+# Copia el resto del código
 COPY . .
 
-# Expose the port the app runs on
+# Expone el puerto
 EXPOSE 3000
 
-# Start the app
+# Comando para iniciar la aplicación
 CMD ["npm", "start"]

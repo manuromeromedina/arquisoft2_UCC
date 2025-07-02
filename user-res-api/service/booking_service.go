@@ -181,32 +181,32 @@ func (s *bookingService) GetAmadeustoken() string {
 		fmt.Println("Error al hacer la solicitud:", err)
 		return ""
 	}
-	defer resp.Body.Close() 
+	defer resp.Body.Close()
 
-	 /* // Custom HTTP client with TLS configuration to skip certificate verification.
-	customTransport := &http.Transport{
-        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-    }
+	/* // Custom HTTP client with TLS configuration to skip certificate verification.
+		customTransport := &http.Transport{
+	        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	    }
 
-    client := &http.Client{
-        Transport: customTransport,
-    } */
+	    client := &http.Client{
+	        Transport: customTransport,
+	    } */
 
 	/*    // Create a new request.
-	req, err := http.NewRequest("POST", "https://test.api.amadeus.com/v1/security/oauth2/token", strings.NewReader(data.Encode()))
-	   if err != nil {
-		   fmt.Println("Error al crear la solicitud:", err)
-		   return ""
-	   }
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req, err := http.NewRequest("POST", "https://test.api.amadeus.com/v1/security/oauth2/token", strings.NewReader(data.Encode()))
+		   if err != nil {
+			   fmt.Println("Error al crear la solicitud:", err)
+			   return ""
+		   }
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	// Perform the request.
-    resp, err := client.Do(req) */
+		// Perform the request.
+	    resp, err := client.Do(req) */
 
 	if err != nil {
-        fmt.Println("Error al hacer la solicitud:", err)
-        return ""
-    }
+		fmt.Println("Error al hacer la solicitud:", err)
+		return ""
+	}
 
 	// Lee la respuesta de la API.
 	body, err := ioutil.ReadAll(resp.Body)
@@ -253,21 +253,17 @@ func (s *bookingService) Availability(startdateconguiones string, enddateconguio
 	solicitud.Header.Set("Authorization", "Bearer "+token)
 
 	fmt.Println(solicitud)
-	
+
 	/* // Realiza la solicitud HTTP
-	customTransport := &http.Transport{
-        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-    }
+		customTransport := &http.Transport{
+	        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	    }
 
-    cliente := &http.Client{
-        Transport: customTransport,
-    } */
+	    cliente := &http.Client{
+	        Transport: customTransport,
+	    } */
 
-	
-	
 	cliente := &http.Client{}
-	
-	
 
 	respuesta, err := cliente.Do(solicitud)
 	if err != nil {
@@ -353,13 +349,19 @@ func (s *bookingService) GetAvailabilityByIdAndDate(idAm string, startDate int, 
 
 	}
 	// es un miss
-	IsAvailable := s.Availability(startdateconguiones, enddateconguiones, idAm)
 	fmt.Println("miss de cache!")
 
-	if IsAvailable == true {
-		responseDto.OkToBook = true
-	} else if IsAvailable == false {
-		responseDto.OkToBook = false
+	if idAm == "RZMIARZR" {
+		IsAvailable := s.Availability(startdateconguiones, enddateconguiones, idAm)
+		if IsAvailable {
+			responseDto.OkToBook = true
+		} else {
+			responseDto.OkToBook = false
+		}
+	} else {
+		// Simular respuesta para hoteles sin integración real
+		fmt.Println("Usando disponibilidad simulada para idAm:", idAm)
+		responseDto.OkToBook = true // o false si querés que no haya
 	}
 
 	// save in cache
@@ -387,6 +389,5 @@ func (s *bookingService) DeleteBooking(id int) error {
 	}
 
 	return nil
-
 
 }

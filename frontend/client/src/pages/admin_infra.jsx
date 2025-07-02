@@ -100,49 +100,71 @@ const AdminInfra = () => {
     window.history.back();
   };
 
-  const handleCrear = (imageName, containerName, containerNumber, runningContainerId) => {
+  const handleCrear = (imageName, containerNames, containerNumber, runningContainerId) => {
+  // Extraer información del contenedor
+  const fullContainerName = containerNames[0].replace('/', '');
+  const serviceName = fullContainerName.split('-').slice(-2, -1)[0];
+  
+  const currentNumber = parseInt(containerNumber) || 1;
+  const newNumber = currentNumber + 1;
+  const projectPrefix = fullContainerName.split('-')[0];
+  const newContainerName = `${projectPrefix}-${serviceName}-${newNumber}`;
+  
+  console.log('Creating container:', {
+    serviceName,
+    imageName,
+    newContainerName,
+    runningContainerId,
+    currentNumber,
+    newNumber
+  });
 
-    var newContainerName = ''
+  // Codificar parámetros para URL (importante para caracteres especiales)
+  const encodedImageName = encodeURIComponent(imageName);
+  const encodedContainerName = encodeURIComponent(newContainerName);
+  const encodedContainerId = encodeURIComponent(runningContainerId);
 
-    if (Number(containerNumber) === 1 &&  containerName[0].slice(-1) !== "1") {
-
-      newContainerName = `${imageName}-${Number(containerName[0].slice(-1))+1}`;
-      console.log(newContainerName)
-
+  // Usar la URL con parámetros que espera tu backend actual
+  const url = `http://localhost:8040/containers/${encodedImageName}/${encodedContainerName}/${encodedContainerId}`;
+  
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    // El body puede estar vacío ya que los datos van en la URL
+    body: JSON.stringify({})
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.text().then(text => {
+        console.error('Server response:', text);
+        throw new Error(`Server error: ${response.status} - ${text}`);
+      });
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log("Container creation response:", data);
+    notifyCreated();
+    
+    // Buscar el ID del nuevo contenedor en la respuesta
+    const newContainerId = data.containerId || data.container_id || data.id;
+    if (newContainerId) {
+      console.log("Starting new container:", newContainerId);
+      handleStartContainer(newContainerId);
     } else {
-
-      newContainerName = `${imageName}-${Number(containerNumber)+1}`;
-      console.log(newContainerName)
-
+      console.log("No container ID returned, refreshing list");
+      setTimeout(() => {
+        getContenedores();
+      }, 1000);
     }
-
-    fetch(`http://localhost:8040/containers/${imageName}/${newContainerName}/${runningContainerId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        imageName: imageName,
-        containerName: newContainerName,
-        runningContainerId: runningContainerId
-      })
-    }).then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to create container');
-      }
-      return response.json();
-    }).then(data => {
-      console.log("Created container ID:", data.containerId);
-      notifyCreated();
-      // Start the container using the retrieved container ID
-      handleStartContainer(data.container_id);
-    }).catch(error => {
-      console.error("Error creating container:", error);
-      notifyCreationError();
-      // alert("Error al crear el contenedor");
-    });
-    }
-
+  })
+  .catch(error => {
+    console.error("Error creating container:", error);
+    notifyCreationError();
+  });
+};
   const handleStartContainer = (containerId) => {
     fetch(`http://localhost:8040/containers/start/${containerId}`, {
       method: 'POST',

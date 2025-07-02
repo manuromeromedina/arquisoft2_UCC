@@ -1,6 +1,5 @@
 module search-api
 
-//go 1.21.1
 go 1.20
 
 require (

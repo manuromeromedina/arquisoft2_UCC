@@ -1,22 +1,21 @@
-
 package service
 
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
-	"strings"
+	client "search-api/client/solr"
 	"search-api/config"
 	"search-api/dto"
-	client "search-api/client/solr"
 	e "search-api/utils/errors"
 	"strconv"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+
 	// "os"
 	"sync"
-
-	// "github.com/streadway/amqp"
 )
 
 type SolrService struct {
@@ -37,7 +36,7 @@ func (s *SolrService) GetQuery(query string) (dto.HotelsDto, e.ApiError) {
 
 	log.Printf("Params: %d", numParams)
 
-	field, query := queryParams[0], queryParams[1] 
+	field, query := queryParams[0], queryParams[1]
 
 	log.Printf("%s and %s", field, query)
 
@@ -48,65 +47,65 @@ func (s *SolrService) GetQuery(query string) (dto.HotelsDto, e.ApiError) {
 
 	if numParams == 4 {
 
-	startdateQuery, enddateQuery := queryParams[2], queryParams[3]
-	startdateSplit := strings.Split(startdateQuery, "-")
-	enddateSplit := strings.Split(enddateQuery, "-")
-	startdate := fmt.Sprintf("%s%s%s", startdateSplit[0], startdateSplit[1], startdateSplit[2])
-	enddate := fmt.Sprintf("%s%s%s", enddateSplit[0], enddateSplit[1], enddateSplit[2])
+		startdateQuery, enddateQuery := queryParams[2], queryParams[3]
+		startdateSplit := strings.Split(startdateQuery, "-")
+		enddateSplit := strings.Split(enddateQuery, "-")
+		startdate := fmt.Sprintf("%s%s%s", startdateSplit[0], startdateSplit[1], startdateSplit[2])
+		enddate := fmt.Sprintf("%s%s%s", enddateSplit[0], enddateSplit[1], enddateSplit[2])
 
-	sDate, _ := strconv.Atoi(startdate)
-	eDate, _ := strconv.Atoi(enddate)
+		sDate, _ := strconv.Atoi(startdate)
+		eDate, _ := strconv.Atoi(enddate)
 
-	log.Debug(sDate)
-	log.Debug(eDate)
+		log.Debug(sDate)
+		log.Debug(eDate)
 
-	// Create a channel to collect results
-	resultsChan := make(chan dto.HotelDto, len(hotelsDto))
+		// Create a channel to collect results
+		resultsChan := make(chan dto.HotelDto, len(hotelsDto))
 
-	// Create a WaitGroup
-	var wg sync.WaitGroup
-	var hotel dto.HotelDto
+		// Create a WaitGroup
+		var wg sync.WaitGroup
+		var hotel dto.HotelDto
 
-	// Iterate through each hotel and make concurrent API calls
-	for _, hotel = range hotelsDto {
-		wg.Add(1) // Increment the WaitGroup counter for each Goroutine
-		go func(hotel dto.HotelDto) {
-			defer wg.Done() // Decrement the WaitGroup counter when Goroutine is done
+		// Iterate through each hotel and make concurrent API calls
+		for _, hotel = range hotelsDto {
+			wg.Add(1) // Increment the WaitGroup counter for each Goroutine
+			go func(hotel dto.HotelDto) {
+				defer wg.Done() // Decrement the WaitGroup counter when Goroutine is done
 
-			// Make API call for each hotel and send the hotel ID
-			result, err := s.GetHotelInfo(hotel.Id, sDate, eDate) // Assuming you have a function to get hotel info
-			if err != nil {
-				result = false
-			}
+				// Make API call for each hotel and send the hotel ID
+				result, err := s.GetHotelInfo(hotel.Id, sDate, eDate) // Assuming you have a function to get hotel info
+				if err != nil {
+					result = false
+				}
 
-			var response dto.HotelDto
+				var response dto.HotelDto
 
-			log.Debug("Adentro")
-			log.Debug(result)
-			log.Debug(response)
+				log.Debug("Adentro")
+				log.Debug(result)
+				log.Debug(response)
 
-			if result == true {
-				response = hotel
-				resultsChan <- response
-			}
-		}(hotel)
-	}
+				if result == true {
+					response = hotel
+					resultsChan <- response
+				}
+			}(hotel)
+		}
 
-	// Create a slice to store the results
-	var hotelResults dto.HotelsDto
+		// Create a slice to store the results
+		var hotelResults dto.HotelsDto
 
-	// Start a Goroutine to close the channel when all Goroutines are done
-	go func() {
-		wg.Wait()     // Wait for all Goroutines to finish
-		close(resultsChan) // Close the channel when all Goroutines are done
-	}()
+		// Start a Goroutine to close the channel when all Goroutines are done
+		go func() {
+			wg.Wait()          // Wait for all Goroutines to finish
+			close(resultsChan) // Close the channel when all Goroutines are done
+		}()
 
-	// Collect results from the channel
-	for response := range resultsChan {
+		// Collect results from the channel
+		for response := range resultsChan {
 			hotelResults = append(hotelResults, response)
-	}
+		}
 
-	return hotelResults, nil
+		return hotelResults, nil
 
 	}
 
@@ -115,27 +114,27 @@ func (s *SolrService) GetQuery(query string) (dto.HotelsDto, e.ApiError) {
 
 func (s *SolrService) GetHotelInfo(id string, startdate int, enddate int) (bool, error) {
 
-		resp, err := http.Get(fmt.Sprintf("http://%s:%d/user-res-api/hotel/availability/%s/%d/%d", config.USERAPIHOST, config.USERAPIPORT, id, startdate, enddate))
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d/user-res-api/hotel/availability/%s/%d/%d", config.USERAPIHOST, config.USERAPIPORT, id, startdate, enddate))
 
-		if err != nil {
-			return false, e.NewBadRequestApiError("user-res-api failed")
-		}
+	if err != nil {
+		return false, e.NewBadRequestApiError("user-res-api failed")
+	}
 
-		var body []byte
-		body, _ = io.ReadAll(resp.Body)
+	var body []byte
+	body, _ = io.ReadAll(resp.Body)
 
-		var responseDto dto.AvailabilityResponse
-		err = json.Unmarshal(body,&responseDto)
+	var responseDto dto.AvailabilityResponse
+	err = json.Unmarshal(body, &responseDto)
 
-		if err != nil {
-			log.Debugf("error in unmarshal")
-			return false, e.NewBadRequestApiError("getHotelInfo failed")
-		}
+	if err != nil {
+		log.Debugf("error in unmarshal")
+		return false, e.NewBadRequestApiError("getHotelInfo failed")
+	}
 
-		status := responseDto.Status
-		return status, nil
+	status := responseDto.Status
+	return status, nil
 }
-	
+
 func (s *SolrService) GetQueryAllFields(query string) (dto.HotelsDto, e.ApiError) {
 	var hotelsDto dto.HotelsDto
 	hotelsDto, err := s.solr.GetQueryAllFields(query)
